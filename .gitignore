@@ -3,3 +3,6 @@
 *.cof
 *.bak
 *.*-bak
+firmware/Debug
+firmware/Release
+*-backups/
