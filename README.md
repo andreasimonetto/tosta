@@ -108,14 +108,14 @@ Sequence | Effect
 Advanced sequences allow passing numerical parameters, and they're started
 using `\e[` (i.e. `\x1B[` or `\033[`).
 
-Sequence                       | Effect
------------------              | ------------------------------------------------------------
-`\e[`N`b`                      | Set display backlight brightness, with *N in [0, 127]*
-`\e[`A`,`B`,`C`,`D`,`E`,`F`c`  | Set user character, specifying bytes in the character sub-matrix from left to right (*A,B,C,D,E,F in [0, 255])*
-`\e[`F`,`T`p`                  | Play sound (immediate) having frequency *F* for *T* milliseconds
-`\e[`F`,`T`q`                  | Enqueue sound playing with frequency *F* for *T* milliseconds
-`\e[`T`s`                      | Set the display standby timer in *T* milliseconds (0 to disable standby)
-`\e[`X`,`Y`z`                  | Set cursor position to *X in [0, 13]* and *Y in [0, 5]*
+Sequence                           | Effect
+-----------------                  | ------------------------------------------------------------
+`\e[`N`b`                          | Set display backlight brightness, with *N in [0, 127]*
+`\e[`N`,`A`,`B`,`C`,`D`,`E`,`F`c`  | Set user character *N*, specifying bytes in the character sub-matrix from left to right (*N in [128, 255]*; *A,B,C,D,E,F in [0, 255])*
+`\e[`F`,`T`p`                      | Play sound (immediate) having frequency *F* for *T* milliseconds
+`\e[`F`,`T`q`                      | Enqueue sound playing with frequency *F* for *T* milliseconds
+`\e[`T`s`                          | Set the display standby timer in *T* milliseconds (0 to disable standby)
+`\e[`X`,`Y`z`                      | Set cursor position to *X in [0, 13]* and *Y in [0, 5]*
 
 ##### Example
 
