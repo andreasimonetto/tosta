@@ -91,6 +91,9 @@ characters:
 - `\f` (form feed): clear screen
 - `\r` (carriage return): move cursor to the beginning of the current line
 
+The user can also add non-standard custom characters (from 0x80 to 0xFF) using
+[parametric escape sequences](#escape-sequences).
+
 #### Escape sequences
 
 Escape sequences are used to obtain special behaviours. In order to start
