@@ -55,8 +55,34 @@ TIM_HandleTypeDef htim14;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-static uint8_t char_in;
 
+typedef enum {
+	I2C_CMD_WRITE_FRAMEBUF,
+} i2c_cmd_t;
+
+static volatile uint8_t char_in;
+static volatile uint8_t to_blit = 0;
+static volatile uint32_t uart_timeout_ticks = 0;
+static volatile i2c_cmd_t i2c_cmd;
+volatile uint8_t i2c_idle = 1;
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_I2C1_Init(void);
+static void MX_SPI1_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM1_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_TIM14_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 void on_button_pressed(button_t b)
 {
 	uint8_t d = 'A' + b;
@@ -78,14 +104,39 @@ void on_encoder_change(int8_t sign)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart == &huart1) {
-		HAL_StatusTypeDef res;
 		HAL_ResumeTick();
-		do {
-			LCD_char_inject(char_in);
-			res = HAL_UART_Receive(&huart1, &char_in, 1, 5);
-		} while(res == HAL_OK);
-		HAL_UART_Receive_IT(&huart1, &char_in, 1);
-		LCD_blit();
+		LCD_char_inject(char_in);
+		uart_timeout_ticks = 5;
+		HAL_UART_Receive_IT(&huart1, (void*)&char_in, 1);
+	}
+}
+
+void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef* hi2c)
+{
+	if(hi2c == &hi2c1) {
+		if(i2c_idle) {
+			i2c_idle = 0;
+			switch(i2c_cmd) {
+				case I2C_CMD_WRITE_FRAMEBUF:
+					HAL_I2C_Slave_Receive_IT(&hi2c1, (void*)lcd_framebuf, LCD_FRAMEBUF_SIZE);
+					break;
+				default:
+					i2c_idle = 1;
+					HAL_I2C_Slave_Receive_IT(&hi2c1, (void*)&i2c_cmd, 1);
+					break;
+			}
+		}
+		else {
+			switch(i2c_cmd) {
+				case I2C_CMD_WRITE_FRAMEBUF:
+					to_blit = 1;
+					break;
+			}
+			HAL_I2C_Slave_Receive_IT(&hi2c1, (void*)&i2c_cmd, 1);
+			i2c_idle = 1;
+		}
+
+		HAL_ResumeTick();
 	}
 }
 
@@ -94,26 +145,14 @@ void HAL_IncTick(void)
 	uwTick += uwTickFreq;
 	speaker_standby_tick(uwTickFreq);
 	LCD_standby_tick(uwTickFreq);
+	if(uart_timeout_ticks > uwTickFreq)
+		uart_timeout_ticks -= uwTickFreq;
+	else {
+		if(uart_timeout_ticks)
+			to_blit = 1;
+		uart_timeout_ticks = 0;
+	}
 }
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_I2C1_Init(void);
-static void MX_SPI1_Init(void);
-static void MX_TIM3_Init(void);
-static void MX_TIM1_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_TIM14_Init(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -158,13 +197,33 @@ int main(void)
 
 #ifdef DEBUG
   HAL_DBGMCU_EnableDBGStopMode();
+#else
+  do {
+	  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+	  GPIO_InitStruct.Pin = GPIO_PIN_13;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_13, 0);
+
+	  GPIO_InitStruct.Pin = GPIO_PIN_14;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_14, 0);
+  } while(0);
 #endif
 
   UART_WakeUpTypeDef uw = { UART_WAKEUP_ON_READDATA_NONEMPTY, 0, 0 };
   HAL_UARTEx_StopModeWakeUpSourceConfig(&huart1, uw);
   HAL_UARTEx_EnableStopMode(&huart1);
-  HAL_UART_Receive_IT(&huart1, &char_in, 1);
+  HAL_UART_Receive_IT(&huart1, (void*)&char_in, 1);
 
+  HAL_I2CEx_EnableWakeUp(&hi2c1);
+  HAL_I2C_Slave_Receive_IT(&hi2c1, (void*)&i2c_cmd, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -174,8 +233,13 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	if(LCD_active() || speaker_playing() || buttons_debouncing())
-		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+	if(to_blit) {
+		LCD_blit();
+		to_blit = 0;
+	}
+
+	if(LCD_active() || speaker_playing() || buttons_debouncing() || uart_timeout_ticks || !i2c_idle)
+		HAL_PWR_EnterSLEEPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 	else {
 		LCD_standby_enter();
 		HAL_SuspendTick();
@@ -250,8 +314,8 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x00303D5B;
-  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.Timing = 0x0010061A;
+  hi2c1.Init.OwnAddress1 = 250;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
   hi2c1.Init.OwnAddress2 = 0;
@@ -634,13 +698,13 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_1_IRQn, 2, 0);
+  HAL_NVIC_SetPriority(EXTI0_1_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI0_1_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI2_3_IRQn, 2, 0);
+  HAL_NVIC_SetPriority(EXTI2_3_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI2_3_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 2, 0);
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 
 }

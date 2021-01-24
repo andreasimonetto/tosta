@@ -17,7 +17,7 @@ static uint8_t char_row = 0, char_col = 0;
 static uint8_t char_status = CHAR_DATA, char_escapebuf_idx = 0, char_escape_params_num = 0;
 static char char_escapebuf[CHAR_ESCAPEBUF_SIZE];
 static int16_t char_escape_params[CHAR_PARAMS_MAX];
-static uint8_t user_font[64][6];
+static uint8_t user_font[128][6];
 
 static void char_escape_nextparam(void)
 {
@@ -47,7 +47,7 @@ uint32_t offset = row * 84 + col * 6;
 		memcpy((uint8_t*)lcd_framebuf + offset, FONT8x5[c - 0x20], 5);
 		lcd_framebuf[offset + 5] = 0;
 	}
-	else if(c < 0xc0)
+	else
 		memcpy((uint8_t*)lcd_framebuf + offset, user_font[c - 0x80], 6);
 }
 
@@ -67,15 +67,26 @@ uint8_t i = 0;
 			if(c == '\a') {
 				speaker_play(1047, 250);
 			}
+			else if(c == '\b') {
+				if(char_row > 0 || char_col > 0) {
+					if(char_col > 0)
+						--char_col;
+					else {
+						--char_row;
+						char_col = 0;
+					}
+					LCD_char_put(char_row, char_col, ' ');
+				}
+			}
 			else if(c == '\n') {
 				char_nextline();
-			}
-			else if(c == '\r') {
-				char_col = 0;
 			}
 			else if(c == '\f') {
 				LCD_clear();
 				char_col = char_row = 0;
+			}
+			else if(c == '\r') {
+				char_col = 0;
 			}
 			else if(c == '\033') {
 				char_status = CHAR_ESCAPE_START;
@@ -126,7 +137,7 @@ uint8_t i = 0;
 							break;
 						case 'c': // set user font character
 							i = (uint8_t)char_escape_params[0];
-							if(i >= 0x80 && i < 0xc0) {
+							if(i >= 0x80) {
 								i -= 0x80;
 								user_font[i][0] = (uint8_t)char_escape_params[1];
 								user_font[i][1] = (uint8_t)char_escape_params[2];
@@ -136,13 +147,16 @@ uint8_t i = 0;
 								user_font[i][5] = (uint8_t)char_escape_params[6];
 							}
 							break;
+						case 's': // LCD standby time
+							lcd_config.standby_ticks = char_escape_params[0];
+							break;
 						case 'z': // cursor position
-							char_row = char_escape_params[0];
-							if(char_row >= LCD_CHAR_ROWS)
-								char_row = LCD_CHAR_ROWS - 1;
-							char_col = char_escape_params[1];
+							char_col = char_escape_params[0];
 							if(char_col >= LCD_CHAR_COLS)
 								char_col = LCD_CHAR_COLS - 1;
+							char_row = char_escape_params[1];
+							if(char_row >= LCD_CHAR_ROWS)
+								char_row = LCD_CHAR_ROWS - 1;
 							break;
 					}
 					char_status = CHAR_DATA;

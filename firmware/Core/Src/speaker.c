@@ -62,6 +62,8 @@ void speaker_queue_play(uint16_t freq, uint16_t time_ticks)
 void speaker_queue_clear(void)
 {
 	cmd_queue_play_idx = cmd_queue_next_idx;
+	speaker_set(0);
+	standby_ticks = 0;
 }
 
 void speaker_standby_tick(uint32_t uwTickFreq)
