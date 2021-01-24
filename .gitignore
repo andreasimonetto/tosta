@@ -2,6 +2,7 @@
 *.o.d
 *.cof
 *.bak
+*.zip
 *.*-bak
 firmware/Debug
 firmware/Release
