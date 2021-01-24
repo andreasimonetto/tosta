@@ -3,7 +3,7 @@
 Tosta is a **low-power terminal interface module** built around the [STM32G030](docs/STM32G0x0.pdf) microcontroller. The module features:
 
 - 48x84 monochrome pixel matrix (Nokia 5510 LCD using [PCD8544](docs/PCD8544.pdf) controller)
-- dimmable backlight
+- configurable dimmable backlight
 - configurable display standby timer
 - a rotary encoder with central switch
 - a D-Pad joystick with central switch
@@ -22,7 +22,7 @@ I2C (binary based) is used for fast display update among other things.
 
 ### UART Inputs
 
-When the module receive and input, it sends it as a command character as
+When the module receive an input, it send a corresponding command character as
 follows:
 
 Event                        | Hex  | Char
@@ -53,7 +53,7 @@ Encoder turn anti-clockwise  | 0x2D | -
 ### Display matrix
 
 The display matrix comprises 84 horizontal by 48 vertical pixels.
-Each individual pixel is either on (1) or off (0) which corresponds to the
+Each individual pixel is either *on* (1) or *off* (0) which corresponds to the
 status of a single bit. Individual bits are grouped into bytes, representing
 a sub-column of 8 pixels.
 
@@ -81,7 +81,7 @@ o   0x38 0x44 0x44 0x44 0x38 0x00
 
 ### UART outputs
 
-Writing characters works as usual on a tty device, using standard ASCII
+Writing characters works as usual on a *tty* device, using standard ASCII
 encoding (printable characters from 0x20 up to 0x7F). There are few special
 characters:
 
@@ -105,16 +105,16 @@ Sequence | Effect
 `\ew`    | Wake up the display from standby
 `\el`    | Display an awesome logo
 
-Advanced sequences allow the passage of numerical parameters, and are started
-using `\e[` (or `\x1B[` or `\033[`).
+Advanced sequences allow passing numerical parameters, and they're started
+using `\e[` (i.e. `\x1B[` or `\033[`).
 
 Sequence                       | Effect
 -----------------              | ------------------------------------------------------------
-`\e[`N`b`                      | Set display backlight brightness with *N in [0, 127]*
+`\e[`N`b`                      | Set display backlight brightness, with *N in [0, 127]*
 `\e[`A`,`B`,`C`,`D`,`E`,`F`c`  | Set user character, specifying bytes in the character sub-matrix from left to right (*A,B,C,D,E,F in [0, 255])*
-`\e[`F`,`T`p`                  | Play sound (immediate) having frequency F for T millis
-`\e[`F`,`T`q`                  | Enqueue sound playing with frequency F for T millis
-`\e[`T`s`                      | Display standby timer in *T millis* (0 to disable standby)
+`\e[`F`,`T`p`                  | Play sound (immediate) having frequency *F* for *T* milliseconds
+`\e[`F`,`T`q`                  | Enqueue sound playing with frequency *F* for *T* milliseconds
+`\e[`T`s`                      | Set the display standby timer in *T* milliseconds (0 to disable standby)
 `\e[`X`,`Y`z`                  | Set cursor position to *X in [0, 13]* and *Y in [0, 5]*
 
 ##### Example
@@ -142,10 +142,10 @@ Firmware is written using the [STM32 Cube IDE](https://www.st.com/en/development
 
 - TIM1: speaker PWM
 - TIM3: LCD backlight PWM
-- SPI1+DMA: LCD data output
 - TIM14: Inputs debounce
+- SPI1+DMA: LCD data output
 - UART: main serial communication interface
-- I2C1: secondary communication interface
+- I2C1: secondary communication interface (slave)
 
 ## Hardware
 
