@@ -13,7 +13,7 @@ static volatile uint8_t lcd_framebuf_dma[LCD_FRAMEBUF_SIZE];
 static volatile lcd_status_t lcd_status = { 0, 0, 0, 0 };
 
 volatile uint8_t lcd_framebuf[LCD_FRAMEBUF_SIZE];
-volatile lcd_config_t lcd_config = { 5000, 64 };
+volatile lcd_config_t lcd_config = { 5000, 150 };
 
 extern SPI_HandleTypeDef hspi1;
 extern DMA_HandleTypeDef hdma_spi1_tx;
@@ -48,9 +48,9 @@ void LCD_init(void)
 	HAL_GPIO_WritePin(LCD_nRST_GPIO_Port, LCD_nRST_Pin, GPIO_PIN_SET);
 	__NOP();__NOP();__NOP();__NOP();__NOP();
 	LCD_write_command(0x21); // LCD extended commands
-	LCD_write_command(0xB9); // Set LCD Vop
-	LCD_write_command(0x04); // Set temperature coefficent
-	LCD_write_command(0x13); // LCD bias mode 1:40
+	LCD_write_command(LCD_VOP); // Set LCD Vop
+	LCD_write_command(LCD_TEMPC); // Set temperature coefficent
+	LCD_write_command(LCD_BIAS); // LCD bias mode 1:40
 	LCD_write_command(0x20); // LCD basic commands
 	LCD_write_command(0x0C); // LCD normal
 	LCD_clear();
@@ -84,7 +84,6 @@ void LCD_standby_enter(void)
 	LCD_write_data((void*)lcd_framebuf_dma, LCD_FRAMEBUF_SIZE);
 	LCD_write_command(0x21); // LCD extended commands
 	LCD_write_command(0x80); // Turn off Vop pump
-	LCD_write_command(0x10); // LCD bias mode 1:40
 	LCD_write_command(0x20); // LCD basic commands
 	LCD_write_command(0x08); // Display blank
 	LCD_write_command(0x24); // Power down
@@ -101,9 +100,9 @@ void LCD_standby_exit(void)
 
 	lcd_status.standby = 0;
 	LCD_write_command(0x21); // LCD extended commands
-	LCD_write_command(0xB9); // Set LCD Vop
-	LCD_write_command(0x04); // Set temperature coefficent
-	LCD_write_command(0x13); // LCD bias mode 1:40
+	LCD_write_command(LCD_VOP); // Set LCD Vop
+	LCD_write_command(LCD_TEMPC); // Set temperature coefficent
+	LCD_write_command(LCD_BIAS); // LCD bias mode 1:40
 	LCD_write_command(0x20); // LCD basic commands
 	LCD_write_command(0x0C); // LCD normal
 	LCD_backlight_set(lcd_config.brightness);

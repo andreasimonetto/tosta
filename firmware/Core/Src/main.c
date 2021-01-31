@@ -192,6 +192,10 @@ int main(void)
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
 
+#if (ENABLE_I2C == 0)
+  HAL_I2C_DeInit(&hi2c1);
+#endif
+
   speaker_init();
   LCD_init();
 

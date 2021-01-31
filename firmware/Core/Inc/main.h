@@ -42,7 +42,7 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+#define ENABLE_I2C 0
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
