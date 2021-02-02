@@ -7,7 +7,7 @@
 #define LCD_HEIGHT            48
 #define LCD_FRAMEBUF_SIZE     ((LCD_WIDTH * LCD_HEIGHT) >> 3)
 #define LCD_BIAS              0x14
-#define LCD_VOP               0xC0
+#define LCD_VOP               0xB4
 #define LCD_TEMPC             0x04
 
 typedef struct {
